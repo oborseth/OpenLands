@@ -13,7 +13,7 @@ import android.widget.Toast;
 
 public class DataHelper {
 	   private static final String DATABASE_NAME = "owbo";
-	   private static final int DATABASE_VERSION = 11;
+	   private static final int DATABASE_VERSION = 12;
 	   private static final String TABLE_NAME = "table1";
 
 	   private Context context;
@@ -36,6 +36,40 @@ public class DataHelper {
 	      this.db.delete(TABLE_NAME, null, null);
 	   }
 
+	   public HashMap<String, Boolean> loadMapTileAllow()
+	   {
+		   	HashMap<String, Boolean> mapTileAllowMap = new HashMap<String, Boolean>();
+		   	Cursor cursor = null;
+
+		   	try
+		   	{
+		   		cursor = this.db.query("map_tile_allow", new String[] { "x", "y" }, null, null, null, null, null);
+		   	}
+		   	catch(Exception e)
+		   	{
+		   		Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
+		   		return mapTileAllowMap;
+		   	}
+
+		   	if (cursor.moveToFirst()) 
+		   	{
+		   		do 
+		   		{
+		   			String x = cursor.getString(0);
+					String y = cursor.getString(1);
+					
+					mapTileAllowMap.put(x+":"+y, true); 
+		        } while (cursor.moveToNext());
+		   	}
+		    
+		   	if (cursor != null && !cursor.isClosed()) 
+		   	{
+		   		cursor.close();
+		    }
+
+  		 	return(mapTileAllowMap);
+	   }
+	   
 	   public HashMap<String, String> loadMapTiles()
 	   {
 		   	HashMap<String, String> mapTilesMap = new HashMap<String, String>();
@@ -117,6 +151,10 @@ public class DataHelper {
 	    			 String[] mapTileObjectsArray = mapTileObjects[i].split(":");
 	    			 db.execSQL("insert into map_tile_objects (mx, my, ox, oy, name) values ("+mapTileObjectsArray[0]+", "+mapTileObjectsArray[1]+", "+mapTileObjectsArray[2]+", "+mapTileObjectsArray[3]+", '"+mapTileObjectsArray[4]+"')");
 	    		 }
+	    		 
+	    		 db.execSQL("CREATE TABLE map_tile_allow (x integer, y integer)");
+	    		 db.execSQL("create unique index x_y on map_tile_allow (x, y)");
+	    		 db.execSQL("insert into map_tile_allow (x, y) values (0, 0)");
 	    	  }
 	    	  catch(Exception e)
 	    	  {
@@ -127,9 +165,18 @@ public class DataHelper {
 	      @Override
 	      public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) 
 	      {
-	         db.execSQL("DROP TABLE IF EXISTS map_tiles");
-	         db.execSQL("DROP TABLE IF EXISTS map_tile_objects");
-	         onCreate(db);
+	    	  try
+	    	  {
+	    		  db.execSQL("DROP TABLE IF EXISTS map_tiles");
+	    		  db.execSQL("DROP TABLE IF EXISTS map_tile_objects");
+	    		  db.execSQL("DROP TABLE IF EXISTS map_tile_allow");
+	    	  }
+	    	  catch(Exception e)
+	    	  {
+	    		  Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
+	    	  }
+    	  
+	    	  onCreate(db);
 	      }
 	   }
 }

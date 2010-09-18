@@ -22,6 +22,7 @@ import android.view.SurfaceView;
 import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class OpenLands extends Activity {
 	
@@ -30,6 +31,7 @@ public class OpenLands extends Activity {
 	private DataHelper dh;
 	private HashMap<String, String> mapTilesMap = null;
 	private HashMap<String, List<HashMap<String, String>>> mapTileObjects = null;
+	private HashMap<String, Boolean> mapTileAllowedMap = null;
 	
     /** Called when the activity is first created. */
     @Override
@@ -37,40 +39,60 @@ public class OpenLands extends Activity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         
-        MyDialog d = new MyDialog(this);
-		d.setTitle("");
-	
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        String lastX = settings.getString("lastX", "0");
+        String lastY = settings.getString("lastY", "0");
+        boolean showSplash = settings.getBoolean("showSplash", true);
+        
+		SharedPreferences.Editor editor = settings.edit();
+        
 		Typeface tangerineBold = Typeface.createFromAsset(this.getAssets(), "fonts/Tangerine_Bold.ttf");
 		Typeface tangerineRegular = Typeface.createFromAsset(this.getAssets(), "fonts/Tangerine_Regular.ttf");
 		
-		TextView dialogTitle = (TextView)d.findViewById(R.id.dialogTitle);
-		dialogTitle.setText(R.string.app_name);
-		dialogTitle.setTypeface(tangerineBold);
-		
-		TextView dialogText = (TextView)d.findViewById(R.id.dialog);
-		dialogText.setText(R.string.splash);
-		dialogText.setTypeface(tangerineRegular);
-				
-    	LayoutParams params = d.getWindow().getAttributes();
-    	params.height = LayoutParams.FILL_PARENT;
-    	params.width = LayoutParams.FILL_PARENT;
-    	
-    	d.getWindow().setAttributes((android.view.WindowManager.LayoutParams) params);
-		d.show();
+		if(showSplash)
+		{
+			editor.putBoolean("showSplash", false);
+			
+	        MyDialog d = new MyDialog(this);
+			d.setTitle("");
+			
+			TextView dialogTitle = (TextView)d.findViewById(R.id.dialogTitle);
+			dialogTitle.setText(R.string.app_name);
+			dialogTitle.setTypeface(tangerineBold);
+			
+			TextView dialogText = (TextView)d.findViewById(R.id.dialog);
+			dialogText.setText(R.string.splash);
+			dialogText.setTypeface(tangerineRegular);
+					
+	    	LayoutParams params = d.getWindow().getAttributes();
+	    	params.height = LayoutParams.FILL_PARENT;
+	    	params.width = LayoutParams.FILL_PARENT;
+	    	
+	    	d.getWindow().setAttributes((android.view.WindowManager.LayoutParams) params);
+			d.show();
+		}
         
         this.dh = new DataHelper(this);
         this.mapTilesMap = this.dh.loadMapTiles();
         this.mapTileObjects = this.dh.loadMapTileObjects();
-        
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        String lastX = settings.getString("lastX", "0");
-        String lastY = settings.getString("lastY", "0");
-        
+        this.mapTileAllowedMap = this.dh.loadMapTileAllow();
+
+        Boolean allowedTile = mapTileAllowedMap.get(lastX+":"+lastY);
+        if(allowedTile == null || allowedTile)
+        {
+    		editor.putString("lastX", "0");
+    		editor.putString("lastY", "0");
+    		lastX = "0";
+    		lastY = "0";
+        }		
+
+		editor.commit();
+
         int mapTileResId = getResources().getIdentifier("tile_"+lastX+"_"+lastY, "drawable", getPackageName());
-    	
+
         DisplayMetrics metrics = new DisplayMetrics(); 
         getWindowManager().getDefaultDisplay().getMetrics( metrics ); 
-        setContentView(new Panel(this, mapTileResId, mapTilesMap, mapTileObjects, metrics, settings, Integer.parseInt(lastX), Integer.parseInt(lastY)));
+        setContentView(new Panel(this, mapTileResId, mapTilesMap, mapTileObjects, mapTileAllowedMap, metrics, settings, Integer.parseInt(lastX), Integer.parseInt(lastY)));
     }
     
     @Override
@@ -139,15 +161,17 @@ class Panel extends SurfaceView implements SurfaceHolder.Callback {
     public HashMap<String, String> _mapTilesMap = null;
     public HashMap<String, List<HashMap<String, String>>> _mapTileObjects = null;
     public List<HashMap<String, String>> _currentMapObjects = null;
+    public HashMap<String, Boolean> _mapTileAllowedMap = null;
     public DisplayMetrics _metrics = null;
     SharedPreferences _settings = null;
     private Vibrator _vibrator;
 	
-    public Panel(Context context, int mapTileResId, HashMap<String, String> mapTilesMap, HashMap<String, List<HashMap<String, String>>> mapTileObjects, DisplayMetrics metrics, SharedPreferences settings, int x, int y) {
+    public Panel(Context context, int mapTileResId, HashMap<String, String> mapTilesMap, HashMap<String, List<HashMap<String, String>>> mapTileObjects, HashMap<String, Boolean> mapTileAllowedMap, DisplayMetrics metrics, SharedPreferences settings, int x, int y) {
         super(context);
         _currentMapId = mapTileResId;
         _mapTilesMap = mapTilesMap;
         _mapTileObjects = mapTileObjects;
+        _mapTileAllowedMap = mapTileAllowedMap;
         _metrics = metrics;
         _settings = settings;
         _x = x;
@@ -182,9 +206,15 @@ class Panel extends SurfaceView implements SurfaceHolder.Callback {
     }
     
     public boolean setMapPieces()
-    {
+    {	
     	_currentMapObjects = _mapTileObjects.get(_x+":"+_y);
     	
+        Boolean allowedTile = _mapTileAllowedMap.get(_x+":"+_y);
+        if(allowedTile == null || allowedTile)
+        {
+        	return false;
+        }
+
     	if(_mapTilesMap.get(_x+":"+String.valueOf(_y+1)) != null)
     		_allowUp = true;
     	else
