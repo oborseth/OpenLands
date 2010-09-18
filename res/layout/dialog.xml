@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/LinearLayout01"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+    
+    <TextView
+	        android:id="@+id/dialogTitle"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:text=""
+	        android:layout_marginBottom="5px"
+	        android:textColor="#000000"
+	        android:textSize="36px"
+	        android:textStyle="bold"
+	        android:gravity="center"
+	        />
+    
+	    <TextView
+	        android:id="@+id/dialog"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:text=""
+	        android:layout_marginTop="0px"
+	        android:layout_marginLeft="70px"
+	        android:layout_marginRight="60px"
+	        android:layout_marginBottom="65px"
+	        android:textColor="#000000"
+	        android:textSize="26px"
+	        android:textStyle=""
+	        android:layout_below="@id/dialogTitle"
+	        />
+</RelativeLayout >
